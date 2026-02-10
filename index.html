@@ -558,6 +558,25 @@
           showAddressesOnMap(addressColumn, nameColumn);
         });
 
+      // Geocoding 캐시 관련 함수
+      function getGeoCache() {
+        try {
+          return JSON.parse(localStorage.getItem("geoCache") || "{}");
+        } catch (e) {
+          return {};
+        }
+      }
+
+      function setGeoCache(address, coords) {
+        try {
+          const cache = getGeoCache();
+          cache[address] = coords;
+          localStorage.setItem("geoCache", JSON.stringify(cache));
+        } catch (e) {
+          // localStorage 용량 초과 시 무시
+        }
+      }
+
       function showAddressesOnMap(addressColumn, nameColumn) {
         markers.forEach((markerData) => {
           markerData.marker.setMap(null);
@@ -571,7 +590,9 @@
 
         let successCount = 0;
         let failCount = 0;
+        let cacheHitCount = 0;
         const bounds = new naver.maps.LatLngBounds();
+        const geoCache = getGeoCache();
 
         fileData.forEach((row, index) => {
           const address = row[addressColumn];
@@ -580,74 +601,113 @@
             return;
           }
 
+          const addressKey = address.trim();
+
+          // 캐시에 있으면 API 호출 없이 바로 사용
+          if (geoCache[addressKey]) {
+            const cached = geoCache[addressKey];
+            cacheHitCount++;
+            placeMarker(cached.x, cached.y, address, row, nameColumn, index, bounds);
+            successCount++;
+
+            if (successCount + failCount === fileData.length) {
+              finishMapping(successCount, failCount, cacheHitCount, bounds);
+            }
+            return;
+          }
+
+          // 캐시에 없으면 API 호출
           naver.maps.Service.geocode({ query: address }, function (status, response) {
               if (status === naver.maps.Service.Status.ERROR) {
                 failCount++;
+                if (successCount + failCount === fileData.length) {
+                  finishMapping(successCount, failCount, cacheHitCount, bounds);
+                }
                 return;
               }
 
               if (response.v2.meta.totalCount === 0) {
                 failCount++;
+                if (successCount + failCount === fileData.length) {
+                  finishMapping(successCount, failCount, cacheHitCount, bounds);
+                }
                 return;
               }
 
               const item = response.v2.addresses[0];
-              const point = new naver.maps.Point(item.x, item.y);
-              const position = new naver.maps.LatLng(point.y, point.x);
+              // 캐시에 저장
+              setGeoCache(addressKey, { x: item.x, y: item.y });
 
-              const marker = new naver.maps.Marker({
-                position: position,
-                map: map,
-                icon: {
-                  content: '<div style="width: 17px; height: 17px; background: #ff0000; border: 2px solid #fff; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>',
-                  anchor: new naver.maps.Point(12, 12),
-                },
-              });
-
-              const name = nameColumn ? row[nameColumn] : `위치 ${index + 1}`;
-
-              const infoWindow = new naver.maps.InfoWindow({
-                content: `<div style="padding:10px;"><strong>${name}</strong><br>${address}</div>`,
-              });
-
-              naver.maps.Event.addListener(marker, "click", function () {
-                if (infoWindow.getMap()) {
-                  infoWindow.close();
-                } else {
-                  infoWindow.open(map, marker);
-                }
-              });
-
-              let labelOverlay = null;
-              if (nameColumn && row[nameColumn]) {
-                const currentZoom = map.getZoom();
-                const showLabel = currentZoom >= LABEL_ZOOM_THRESHOLD;
-
-                labelOverlay = new naver.maps.Marker({
-                  position: position,
-                  map: map,
-                  icon: {
-                    content: `<div class="marker-label" style="display: ${showLabel ? "block" : "none"};">${row[nameColumn]}</div>`,
-                    anchor: new naver.maps.Point(0, 5),
-                  },
-                  clickable: false,
-                });
-              }
-
-              markers.push({ marker: marker, labelOverlay: labelOverlay });
-              bounds.extend(position);
+              placeMarker(item.x, item.y, address, row, nameColumn, index, bounds);
               successCount++;
 
               if (successCount + failCount === fileData.length) {
-                if (successCount > 0) {
-                  map.fitBounds(bounds);
-                  showStatus(`${successCount}개 주소 표시 완료! ${failCount > 0 ? `(${failCount}개 실패)` : ""}`, "success");
-                } else {
-                  showStatus("주소를 찾을 수 없습니다. 주소 형식을 확인해주세요.", "error");
-                }
+                finishMapping(successCount, failCount, cacheHitCount, bounds);
               }
             });
         });
+      }
+
+      function placeMarker(x, y, address, row, nameColumn, index, bounds) {
+        const position = new naver.maps.LatLng(parseFloat(y), parseFloat(x));
+
+        const marker = new naver.maps.Marker({
+          position: position,
+          map: map,
+          icon: {
+            content: '<div style="width: 17px; height: 17px; background: #ff0000; border: 2px solid #fff; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>',
+            anchor: new naver.maps.Point(12, 12),
+          },
+        });
+
+        const name = nameColumn ? row[nameColumn] : `위치 ${index + 1}`;
+
+        const infoWindow = new naver.maps.InfoWindow({
+          content: `<div style="padding:10px;"><strong>${name}</strong><br>${address}</div>`,
+        });
+
+        naver.maps.Event.addListener(marker, "click", function () {
+          if (infoWindow.getMap()) {
+            infoWindow.close();
+          } else {
+            infoWindow.open(map, marker);
+          }
+        });
+
+        let labelOverlay = null;
+        if (nameColumn && row[nameColumn]) {
+          const currentZoom = map.getZoom();
+          const showLabel = currentZoom >= LABEL_ZOOM_THRESHOLD;
+
+          labelOverlay = new naver.maps.Marker({
+            position: position,
+            map: map,
+            icon: {
+              content: `<div class="marker-label" style="display: ${showLabel ? "block" : "none"};">${row[nameColumn]}</div>`,
+              anchor: new naver.maps.Point(0, 5),
+            },
+            clickable: false,
+          });
+        }
+
+        markers.push({ marker: marker, labelOverlay: labelOverlay });
+        bounds.extend(position);
+      }
+
+      function finishMapping(successCount, failCount, cacheHitCount, bounds) {
+        if (successCount > 0) {
+          map.fitBounds(bounds);
+          let msg = `${successCount}개 주소 표시 완료!`;
+          if (cacheHitCount > 0) {
+            msg += ` (캐시 ${cacheHitCount}건 활용)`;
+          }
+          if (failCount > 0) {
+            msg += ` (${failCount}개 실패)`;
+          }
+          showStatus(msg, "success");
+        } else {
+          showStatus("주소를 찾을 수 없습니다. 주소 형식을 확인해주세요.", "error");
+        }
       }
 
       function showStatus(message, type) {
