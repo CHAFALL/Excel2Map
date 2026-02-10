@@ -138,6 +138,7 @@
         padding: 20px;
         border-radius: 8px;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        position: relative;
       }
 
       #map {
@@ -233,6 +234,7 @@
         padding: 15px 30px;
       }
 
+      /* 전체화면 스타일 */
       .map-container.fullscreen {
         position: fixed;
         top: 0;
@@ -241,12 +243,41 @@
         height: 100vh;
         z-index: 9999;
         margin: 0;
+        padding: 0;
         border-radius: 0;
       }
 
       .map-container.fullscreen #map {
-        height: calc(100vh - 80px);
+        height: 100vh;
         border-radius: 0;
+      }
+
+      .map-container.fullscreen .map-controls {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        z-index: 10;
+        margin: 0;
+      }
+
+      .map-container.fullscreen .map-controls .map-title {
+        display: none;
+      }
+
+      .map-container.fullscreen .btn-fullscreen {
+        padding: 10px 18px;
+        background: rgba(255, 255, 255, 0.92);
+        color: #333;
+        border: none;
+        border-radius: 6px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        font-size: 14px;
+        font-weight: 600;
+        backdrop-filter: blur(4px);
+      }
+
+      .map-container.fullscreen .btn-fullscreen:hover {
+        background: rgba(255, 255, 255, 1);
       }
 
       /* 마커 라벨 스타일 */
@@ -328,8 +359,16 @@
           width: 100%;
         }
 
-        .map-container.fullscreen #map {
-          height: calc(100vh - 120px);
+        .map-container.fullscreen .map-controls {
+          position: absolute;
+          top: 12px;
+          right: 12px;
+          flex-direction: row;
+          align-items: center;
+        }
+
+        .map-container.fullscreen .btn-fullscreen {
+          width: auto;
         }
       }
 
@@ -395,7 +434,7 @@
 
       <div class="map-container" id="mapContainer">
         <div class="map-controls">
-          <h3 style="margin: 0; color: #333">지도</h3>
+          <h3 class="map-title" style="margin: 0; color: #333">지도</h3>
           <button id="fullscreenBtn" class="btn-fullscreen">🔍 전체화면</button>
         </div>
         <div id="map"></div>
@@ -634,7 +673,7 @@
       document.getElementById("fullscreenBtn").addEventListener("click", function () {
           const mapContainer = document.getElementById("mapContainer");
           const isFullscreen = mapContainer.classList.toggle("fullscreen");
-          this.textContent = isFullscreen ? "✕ 전체화면 닫기" : "🔍 전체화면";
+          this.textContent = isFullscreen ? "✕ 닫기" : "🔍 전체화면";
 
           setTimeout(function () {
             if (map) {
