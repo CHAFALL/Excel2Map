@@ -387,51 +387,50 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 10px 0;
+        overflow: hidden;
       }
 
-      .zoom-slider-track input[type="range"] {
-        writing-mode: vertical-lr;
-        direction: rtl;
-        width: 160px;
-        height: 4px;
+      .zoom-slider-inner {
+        width: 140px;
+        transform: rotate(-90deg);
+      }
+
+      .zoom-slider-inner input[type="range"] {
+        width: 100%;
+        height: 6px;
         appearance: none;
         -webkit-appearance: none;
-        background: transparent;
+        background: #ccc;
+        border-radius: 3px;
+        outline: none;
         cursor: pointer;
       }
 
-      .zoom-slider-track input[type="range"]::-webkit-slider-runnable-track {
-        width: 4px;
-        height: 100%;
-        background: #ccc;
-        border-radius: 2px;
-      }
-
-      .zoom-slider-track input[type="range"]::-webkit-slider-thumb {
+      .zoom-slider-inner input[type="range"]::-webkit-slider-thumb {
         -webkit-appearance: none;
-        width: 16px;
-        height: 16px;
+        width: 18px;
+        height: 18px;
         background: #03c75a;
         border: 2px solid #fff;
         border-radius: 50%;
         box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
-        margin-left: -6px;
+        cursor: pointer;
       }
 
-      .zoom-slider-track input[type="range"]::-moz-range-track {
-        width: 4px;
+      .zoom-slider-inner input[type="range"]::-moz-range-track {
+        height: 6px;
         background: #ccc;
-        border-radius: 2px;
+        border-radius: 3px;
       }
 
-      .zoom-slider-track input[type="range"]::-moz-range-thumb {
-        width: 16px;
-        height: 16px;
+      .zoom-slider-inner input[type="range"]::-moz-range-thumb {
+        width: 18px;
+        height: 18px;
         background: #03c75a;
         border: 2px solid #fff;
         border-radius: 50%;
         box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+        cursor: pointer;
       }
 
       .zoom-level-label {
@@ -709,8 +708,10 @@
             <!-- 줌 슬라이더 -->
             <div class="zoom-slider-wrap">
               <button class="zoom-btn" id="zoomInBtn" title="확대">+</button>
-              <div class="zoom-slider-track">
-                <input type="range" id="zoomSlider" min="1" max="21" step="0.25" value="12" />
+            <div class="zoom-slider-track">
+                <div class="zoom-slider-inner">
+                  <input type="range" id="zoomSlider" min="1" max="21" step="0.25" value="12" />
+                </div>
               </div>
               <button class="zoom-btn" id="zoomOutBtn" title="축소">−</button>
               <span class="zoom-level-label" id="zoomLabel">12</span>
