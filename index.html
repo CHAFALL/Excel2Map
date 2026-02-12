@@ -190,6 +190,12 @@
         justify-content: space-between;
         align-items: center;
         margin-bottom: 15px;
+        transition: opacity 0.25s ease;
+      }
+
+      .map-controls.hidden {
+        opacity: 0;
+        pointer-events: none;
       }
 
       .btn-fullscreen {
@@ -235,6 +241,15 @@
       }
 
       /* 지도 타입 플로팅 메뉴 */
+      .map-overlay-ui {
+        transition: opacity 0.25s ease;
+      }
+
+      .map-overlay-ui.hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+
       .map-type-floating {
         position: absolute;
         top: 12px;
@@ -319,6 +334,147 @@
         width: 16px;
         text-align: center;
         font-size: 12px;
+      }
+
+      /* 줌 슬라이더 */
+      .zoom-slider-wrap {
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 10;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .zoom-btn {
+        width: 36px;
+        height: 36px;
+        background: rgba(255, 255, 255, 0.95);
+        border: none;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        cursor: pointer;
+        font-size: 18px;
+        font-weight: 700;
+        color: #333;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        backdrop-filter: blur(4px);
+        transition: all 0.15s;
+        user-select: none;
+      }
+
+      .zoom-btn:hover {
+        background: #fff;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
+      }
+
+      .zoom-btn:active {
+        transform: scale(0.93);
+      }
+
+      .zoom-slider-track {
+        width: 36px;
+        height: 160px;
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        backdrop-filter: blur(4px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 10px 0;
+      }
+
+      .zoom-slider-track input[type="range"] {
+        writing-mode: vertical-lr;
+        direction: rtl;
+        width: 160px;
+        height: 4px;
+        appearance: none;
+        -webkit-appearance: none;
+        background: transparent;
+        cursor: pointer;
+      }
+
+      .zoom-slider-track input[type="range"]::-webkit-slider-runnable-track {
+        width: 4px;
+        height: 100%;
+        background: #ccc;
+        border-radius: 2px;
+      }
+
+      .zoom-slider-track input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 16px;
+        height: 16px;
+        background: #03c75a;
+        border: 2px solid #fff;
+        border-radius: 50%;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+        margin-left: -6px;
+      }
+
+      .zoom-slider-track input[type="range"]::-moz-range-track {
+        width: 4px;
+        background: #ccc;
+        border-radius: 2px;
+      }
+
+      .zoom-slider-track input[type="range"]::-moz-range-thumb {
+        width: 16px;
+        height: 16px;
+        background: #03c75a;
+        border: 2px solid #fff;
+        border-radius: 50%;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+      }
+
+      .zoom-level-label {
+        font-size: 11px;
+        color: #666;
+        background: rgba(255, 255, 255, 0.95);
+        padding: 2px 6px;
+        border-radius: 4px;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+        font-weight: 600;
+        min-width: 36px;
+        text-align: center;
+      }
+
+      /* 캡쳐 모드 버튼 */
+      .btn-capture-mode {
+        position: absolute;
+        bottom: 12px;
+        right: 12px;
+        z-index: 10;
+        width: 40px;
+        height: 40px;
+        background: rgba(255, 255, 255, 0.95);
+        border: none;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        cursor: pointer;
+        font-size: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        backdrop-filter: blur(4px);
+        transition: all 0.2s;
+      }
+
+      .btn-capture-mode:hover {
+        background: #fff;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
+      }
+
+      .btn-capture-mode.active {
+        background: #03c75a;
+        color: white;
       }
 
       /* 전체화면 스타일 */
@@ -531,23 +687,39 @@
 
         <!-- 지도 타입 플로팅 메뉴 (지도 위에 위치) -->
         <div style="position: relative;">
-          <div class="map-type-floating">
-            <button class="map-type-toggle" id="mapTypeToggle" title="지도 유형">🗺️</button>
-            <div class="map-type-menu" id="mapTypeMenu">
-              <button class="map-type-btn active" data-type="NORMAL">
-                <span class="check-icon">✓</span> 일반지도
-              </button>
-              <button class="map-type-btn" data-type="SATELLITE">
-                <span class="check-icon"></span> 위성지도
-              </button>
-              <button class="map-type-btn" data-type="HYBRID">
-                <span class="check-icon"></span> 위성+라벨
-              </button>
-              <button class="map-type-btn" data-type="TERRAIN">
-                <span class="check-icon"></span> 지형지도
-              </button>
+          <div class="map-overlay-ui" id="mapOverlayUI">
+            <div class="map-type-floating">
+              <button class="map-type-toggle" id="mapTypeToggle" title="지도 유형">🗺️</button>
+              <div class="map-type-menu" id="mapTypeMenu">
+                <button class="map-type-btn active" data-type="NORMAL">
+                  <span class="check-icon">✓</span> 일반지도
+                </button>
+                <button class="map-type-btn" data-type="SATELLITE">
+                  <span class="check-icon"></span> 위성지도
+                </button>
+                <button class="map-type-btn" data-type="HYBRID">
+                  <span class="check-icon"></span> 위성+라벨
+                </button>
+                <button class="map-type-btn" data-type="TERRAIN">
+                  <span class="check-icon"></span> 지형지도
+                </button>
+              </div>
+            </div>
+
+            <!-- 줌 슬라이더 -->
+            <div class="zoom-slider-wrap">
+              <button class="zoom-btn" id="zoomInBtn" title="확대">+</button>
+              <div class="zoom-slider-track">
+                <input type="range" id="zoomSlider" min="1" max="21" step="0.25" value="12" />
+              </div>
+              <button class="zoom-btn" id="zoomOutBtn" title="축소">−</button>
+              <span class="zoom-level-label" id="zoomLabel">12</span>
             </div>
           </div>
+
+          <!-- 캡쳐 모드 버튼 (항상 표시) -->
+          <button class="btn-capture-mode" id="captureModeBtn" title="캡쳐 모드 (UI 숨기기)">📷</button>
+
           <div id="map"></div>
         </div>
       </div>
@@ -563,12 +735,11 @@
         const mapOptions = {
           center: new naver.maps.LatLng(37.5665, 126.978),
           zoom: 12,
+          scrollWheel: true,
+          zoomControl: false,
         };
         map = new naver.maps.Map("map", mapOptions);
-
-        naver.maps.Event.addListener(map, "zoom_changed", function (zoom) {
-          updateLabelsVisibility(zoom);
-        });
+        setupZoomSync();
       }
 
       function updateLabelsVisibility(zoom) {
@@ -617,6 +788,63 @@
           map.setMapTypeId(naver.maps.MapTypeId[this.dataset.type]);
           mapTypeMenu.classList.remove("open");
         });
+      });
+
+      // 줌 슬라이더
+      const zoomSlider = document.getElementById("zoomSlider");
+      const zoomLabel = document.getElementById("zoomLabel");
+      let isSliderUpdating = false;
+
+      zoomSlider.addEventListener("input", function () {
+        const val = parseFloat(this.value);
+        isSliderUpdating = true;
+        map.setZoom(val, true);
+        zoomLabel.textContent = val % 1 === 0 ? val : val.toFixed(1);
+        isSliderUpdating = false;
+      });
+
+      document.getElementById("zoomInBtn").addEventListener("click", function () {
+        const current = map.getZoom();
+        const next = Math.min(21, Math.round((current + 0.5) * 4) / 4);
+        map.setZoom(next, true);
+      });
+
+      document.getElementById("zoomOutBtn").addEventListener("click", function () {
+        const current = map.getZoom();
+        const next = Math.max(1, Math.round((current - 0.5) * 4) / 4);
+        map.setZoom(next, true);
+      });
+
+      // 지도 줌 변경 시 슬라이더 동기화 (initMap 후에 리스너 추가)
+      function setupZoomSync() {
+        naver.maps.Event.addListener(map, "zoom_changed", function (zoom) {
+          if (!isSliderUpdating) {
+            zoomSlider.value = zoom;
+            zoomLabel.textContent = zoom % 1 === 0 ? zoom : parseFloat(zoom).toFixed(1);
+          }
+          updateLabelsVisibility(zoom);
+        });
+      }
+
+      // 캡쳐 모드
+      const captureModeBtn = document.getElementById("captureModeBtn");
+      const mapOverlayUI = document.getElementById("mapOverlayUI");
+      let isCaptureMode = false;
+
+      captureModeBtn.addEventListener("click", function () {
+        isCaptureMode = !isCaptureMode;
+        const mapControls = document.querySelector(".map-controls");
+        if (isCaptureMode) {
+          mapOverlayUI.classList.add("hidden");
+          mapControls.classList.add("hidden");
+          this.classList.add("active");
+          this.title = "캡쳐 모드 해제";
+        } else {
+          mapOverlayUI.classList.remove("hidden");
+          mapControls.classList.remove("hidden");
+          this.classList.remove("active");
+          this.title = "캡쳐 모드 (UI 숨기기)";
+        }
       });
 
       document.getElementById("fileInput").addEventListener("change", function (e) {
