@@ -234,6 +234,51 @@
         padding: 15px 30px;
       }
 
+      /* 지도 타입 버튼 */
+      .map-type-group {
+        position: absolute;
+        top: 12px;
+        left: 12px;
+        z-index: 10;
+        display: flex;
+        gap: 0;
+        border-radius: 6px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+      }
+
+      .map-type-btn {
+        padding: 8px 14px;
+        background: rgba(255, 255, 255, 0.92);
+        color: #555;
+        border: none;
+        border-right: 1px solid #e0e0e0;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 500;
+        backdrop-filter: blur(4px);
+        transition: all 0.2s;
+        white-space: nowrap;
+      }
+
+      .map-type-btn:last-child {
+        border-right: none;
+      }
+
+      .map-type-btn:hover {
+        background: rgba(255, 255, 255, 1);
+        color: #333;
+      }
+
+      .map-type-btn.active {
+        background: #03c75a;
+        color: white;
+      }
+
+      .map-type-btn.active:hover {
+        background: #02b350;
+      }
+
       /* 전체화면 스타일 */
       .map-container.fullscreen {
         position: fixed;
@@ -265,13 +310,13 @@
       }
 
       .map-container.fullscreen .btn-fullscreen {
-        padding: 10px 18px;
+        padding: 8px 14px;
         background: rgba(255, 255, 255, 0.92);
         color: #333;
         border: none;
         border-radius: 6px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-        font-size: 14px;
+        font-size: 13px;
         font-weight: 600;
         backdrop-filter: blur(4px);
       }
@@ -359,6 +404,11 @@
           width: 100%;
         }
 
+        .map-type-btn {
+          padding: 7px 10px;
+          font-size: 12px;
+        }
+
         .map-container.fullscreen .map-controls {
           position: absolute;
           top: 12px;
@@ -383,6 +433,11 @@
 
         #map {
           height: 300px;
+        }
+
+        .map-type-btn {
+          padding: 6px 8px;
+          font-size: 11px;
         }
       }
     </style>
@@ -437,7 +492,17 @@
           <h3 class="map-title" style="margin: 0; color: #333">지도</h3>
           <button id="fullscreenBtn" class="btn-fullscreen">🔍 전체화면</button>
         </div>
-        <div id="map"></div>
+
+        <!-- 지도 타입 버튼 (지도 위에 위치) -->
+        <div style="position: relative;">
+          <div class="map-type-group">
+            <button class="map-type-btn active" data-type="NORMAL">일반지도</button>
+            <button class="map-type-btn" data-type="SATELLITE">위성지도</button>
+            <button class="map-type-btn" data-type="HYBRID">위성+라벨</button>
+            <button class="map-type-btn" data-type="TERRAIN">지형지도</button>
+          </div>
+          <div id="map"></div>
+        </div>
       </div>
     </div>
 
@@ -475,6 +540,15 @@
           }
         });
       }
+
+      // 지도 타입 전환
+      document.querySelectorAll(".map-type-btn").forEach((btn) => {
+        btn.addEventListener("click", function () {
+          document.querySelectorAll(".map-type-btn").forEach((b) => b.classList.remove("active"));
+          this.classList.add("active");
+          map.setMapTypeId(naver.maps.MapTypeId[this.dataset.type]);
+        });
+      });
 
       document.getElementById("fileInput").addEventListener("change", function (e) {
           const file = e.target.files[0];
@@ -586,18 +660,13 @@
         });
         markers = [];
 
-        showStatus("주소를 지도에 표시하는 중... (0/" + fileData.length + ")", "info");
+        showStatus("주소를 지도에 표시하는 중...", "info");
 
         let successCount = 0;
         let failCount = 0;
         let cacheHitCount = 0;
         const bounds = new naver.maps.LatLngBounds();
         const geoCache = getGeoCache();
-        const BATCH_SIZE = 100;
-        const BATCH_DELAY = 300; // ms
-
-        // 캐시된 것 먼저 즉시 처리, API 필요한 것은 따로 모음
-        const needApi = [];
 
         fileData.forEach((row, index) => {
           const address = row[addressColumn];
@@ -608,62 +677,49 @@
 
           const addressKey = address.trim();
 
+          // 캐시에 있으면 API 호출 없이 바로 사용
           if (geoCache[addressKey]) {
             const cached = geoCache[addressKey];
             cacheHitCount++;
             placeMarker(cached.x, cached.y, address, row, nameColumn, index, bounds);
             successCount++;
-          } else {
-            needApi.push({ address, addressKey, row, index });
+
+            if (successCount + failCount === fileData.length) {
+              finishMapping(successCount, failCount, cacheHitCount, bounds);
+            }
+            return;
           }
-        });
 
-        // API 호출이 필요 없으면 바로 완료
-        if (needApi.length === 0) {
-          finishMapping(successCount, failCount, cacheHitCount, bounds);
-          return;
-        }
-
-        // 배치 단위로 순차 처리
-        let batchIndex = 0;
-
-        function processBatch() {
-          const start = batchIndex * BATCH_SIZE;
-          const end = Math.min(start + BATCH_SIZE, needApi.length);
-          let batchDone = 0;
-          const batchTotal = end - start;
-
-          for (let i = start; i < end; i++) {
-            const item = needApi[i];
-
-            naver.maps.Service.geocode({ query: item.address }, function (status, response) {
-              if (status === naver.maps.Service.Status.ERROR || response.v2.meta.totalCount === 0) {
+          // 캐시에 없으면 API 호출
+          naver.maps.Service.geocode({ query: address }, function (status, response) {
+              if (status === naver.maps.Service.Status.ERROR) {
                 failCount++;
-              } else {
-                const result = response.v2.addresses[0];
-                setGeoCache(item.addressKey, { x: result.x, y: result.y });
-                placeMarker(result.x, result.y, item.address, item.row, nameColumn, item.index, bounds);
-                successCount++;
-              }
-
-              batchDone++;
-              const totalDone = successCount + failCount;
-              showStatus(`주소를 지도에 표시하는 중... (${totalDone}/${fileData.length})`, "info");
-
-              // 현재 배치 완료 시 다음 배치 또는 종료
-              if (batchDone === batchTotal) {
-                batchIndex++;
-                if (batchIndex * BATCH_SIZE < needApi.length) {
-                  setTimeout(processBatch, BATCH_DELAY);
-                } else {
+                if (successCount + failCount === fileData.length) {
                   finishMapping(successCount, failCount, cacheHitCount, bounds);
                 }
+                return;
+              }
+
+              if (response.v2.meta.totalCount === 0) {
+                failCount++;
+                if (successCount + failCount === fileData.length) {
+                  finishMapping(successCount, failCount, cacheHitCount, bounds);
+                }
+                return;
+              }
+
+              const item = response.v2.addresses[0];
+              // 캐시에 저장
+              setGeoCache(addressKey, { x: item.x, y: item.y });
+
+              placeMarker(item.x, item.y, address, row, nameColumn, index, bounds);
+              successCount++;
+
+              if (successCount + failCount === fileData.length) {
+                finishMapping(successCount, failCount, cacheHitCount, bounds);
               }
             });
-          }
-        }
-
-        processBatch();
+        });
       }
 
       function placeMarker(x, y, address, row, nameColumn, index, bounds) {
