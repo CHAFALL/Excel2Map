@@ -234,49 +234,91 @@
         padding: 15px 30px;
       }
 
-      /* 지도 타입 버튼 */
-      .map-type-group {
+      /* 지도 타입 플로팅 메뉴 */
+      .map-type-floating {
         position: absolute;
         top: 12px;
         left: 12px;
         z-index: 10;
-        display: flex;
-        gap: 0;
-        border-radius: 6px;
-        overflow: hidden;
+      }
+
+      .map-type-toggle {
+        width: 40px;
+        height: 40px;
+        background: rgba(255, 255, 255, 0.95);
+        border: none;
+        border-radius: 8px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        cursor: pointer;
+        font-size: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        backdrop-filter: blur(4px);
+        transition: all 0.2s;
+      }
+
+      .map-type-toggle:hover {
+        background: #fff;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
+      }
+
+      .map-type-menu {
+        position: absolute;
+        top: 46px;
+        left: 0;
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 8px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        backdrop-filter: blur(4px);
+        overflow: hidden;
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(-6px);
+        transition: all 0.2s ease;
+      }
+
+      .map-type-menu.open {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
       }
 
       .map-type-btn {
-        padding: 8px 14px;
-        background: rgba(255, 255, 255, 0.92);
-        color: #555;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        padding: 10px 16px;
+        background: none;
         border: none;
-        border-right: 1px solid #e0e0e0;
+        border-bottom: 1px solid #eee;
         cursor: pointer;
         font-size: 13px;
         font-weight: 500;
-        backdrop-filter: blur(4px);
-        transition: all 0.2s;
+        color: #555;
         white-space: nowrap;
+        transition: all 0.15s;
       }
 
       .map-type-btn:last-child {
-        border-right: none;
+        border-bottom: none;
       }
 
       .map-type-btn:hover {
-        background: rgba(255, 255, 255, 1);
+        background: #f5f5f5;
         color: #333;
       }
 
       .map-type-btn.active {
-        background: #03c75a;
-        color: white;
+        color: #03c75a;
+        font-weight: 700;
       }
 
-      .map-type-btn.active:hover {
-        background: #02b350;
+      .map-type-btn .check-icon {
+        width: 16px;
+        text-align: center;
+        font-size: 12px;
       }
 
       /* 전체화면 스타일 */
@@ -404,10 +446,7 @@
           width: 100%;
         }
 
-        .map-type-btn {
-          padding: 7px 10px;
-          font-size: 12px;
-        }
+
 
         .map-container.fullscreen .map-controls {
           position: absolute;
@@ -435,10 +474,7 @@
           height: 300px;
         }
 
-        .map-type-btn {
-          padding: 6px 8px;
-          font-size: 11px;
-        }
+
       }
     </style>
   </head>
@@ -493,13 +529,24 @@
           <button id="fullscreenBtn" class="btn-fullscreen">🔍 전체화면</button>
         </div>
 
-        <!-- 지도 타입 버튼 (지도 위에 위치) -->
+        <!-- 지도 타입 플로팅 메뉴 (지도 위에 위치) -->
         <div style="position: relative;">
-          <div class="map-type-group">
-            <button class="map-type-btn active" data-type="NORMAL">일반지도</button>
-            <button class="map-type-btn" data-type="SATELLITE">위성지도</button>
-            <button class="map-type-btn" data-type="HYBRID">위성+라벨</button>
-            <button class="map-type-btn" data-type="TERRAIN">지형지도</button>
+          <div class="map-type-floating">
+            <button class="map-type-toggle" id="mapTypeToggle" title="지도 유형">🗺️</button>
+            <div class="map-type-menu" id="mapTypeMenu">
+              <button class="map-type-btn active" data-type="NORMAL">
+                <span class="check-icon">✓</span> 일반지도
+              </button>
+              <button class="map-type-btn" data-type="SATELLITE">
+                <span class="check-icon"></span> 위성지도
+              </button>
+              <button class="map-type-btn" data-type="HYBRID">
+                <span class="check-icon"></span> 위성+라벨
+              </button>
+              <button class="map-type-btn" data-type="TERRAIN">
+                <span class="check-icon"></span> 지형지도
+              </button>
+            </div>
           </div>
           <div id="map"></div>
         </div>
@@ -541,12 +588,34 @@
         });
       }
 
-      // 지도 타입 전환
+      // 지도 타입 플로팅 메뉴
+      const mapTypeToggle = document.getElementById("mapTypeToggle");
+      const mapTypeMenu = document.getElementById("mapTypeMenu");
+
+      mapTypeToggle.addEventListener("click", function (e) {
+        e.stopPropagation();
+        mapTypeMenu.classList.toggle("open");
+      });
+
+      // 바깥 클릭 시 메뉴 닫기
+      document.addEventListener("click", function () {
+        mapTypeMenu.classList.remove("open");
+      });
+
+      mapTypeMenu.addEventListener("click", function (e) {
+        e.stopPropagation();
+      });
+
       document.querySelectorAll(".map-type-btn").forEach((btn) => {
         btn.addEventListener("click", function () {
-          document.querySelectorAll(".map-type-btn").forEach((b) => b.classList.remove("active"));
+          document.querySelectorAll(".map-type-btn").forEach((b) => {
+            b.classList.remove("active");
+            b.querySelector(".check-icon").textContent = "";
+          });
           this.classList.add("active");
+          this.querySelector(".check-icon").textContent = "✓";
           map.setMapTypeId(naver.maps.MapTypeId[this.dataset.type]);
+          mapTypeMenu.classList.remove("open");
         });
       });
 
