@@ -336,129 +336,22 @@
         font-size: 12px;
       }
 
-      /* 줌 슬라이더 */
-      .zoom-slider-wrap {
-        position: absolute;
-        right: 12px;
-        top: 50%;
-        transform: translateY(-50%);
-        z-index: 10;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 4px;
-      }
 
-      .zoom-btn {
-        width: 36px;
-        height: 36px;
-        background: rgba(255, 255, 255, 0.95);
-        border: none;
-        border-radius: 8px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-        cursor: pointer;
-        font-size: 18px;
-        font-weight: 700;
-        color: #333;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        backdrop-filter: blur(4px);
-        transition: all 0.15s;
-        user-select: none;
-      }
-
-      .zoom-btn:hover {
-        background: #fff;
-        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
-      }
-
-      .zoom-btn:active {
-        transform: scale(0.93);
-      }
-
-      .zoom-slider-track {
-        width: 36px;
-        height: 160px;
-        background: rgba(255, 255, 255, 0.95);
-        border-radius: 8px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-        backdrop-filter: blur(4px);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        overflow: hidden;
-      }
-
-      .zoom-slider-inner {
-        width: 140px;
-        transform: rotate(-90deg);
-      }
-
-      .zoom-slider-inner input[type="range"] {
-        width: 100%;
-        height: 6px;
-        appearance: none;
-        -webkit-appearance: none;
-        background: #ccc;
-        border-radius: 3px;
-        outline: none;
-        cursor: pointer;
-      }
-
-      .zoom-slider-inner input[type="range"]::-webkit-slider-thumb {
-        -webkit-appearance: none;
-        width: 18px;
-        height: 18px;
-        background: #03c75a;
-        border: 2px solid #fff;
-        border-radius: 50%;
-        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
-        cursor: pointer;
-      }
-
-      .zoom-slider-inner input[type="range"]::-moz-range-track {
-        height: 6px;
-        background: #ccc;
-        border-radius: 3px;
-      }
-
-      .zoom-slider-inner input[type="range"]::-moz-range-thumb {
-        width: 18px;
-        height: 18px;
-        background: #03c75a;
-        border: 2px solid #fff;
-        border-radius: 50%;
-        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
-        cursor: pointer;
-      }
-
-      .zoom-level-label {
-        font-size: 11px;
-        color: #666;
-        background: rgba(255, 255, 255, 0.95);
-        padding: 3px 8px;
-        border-radius: 4px;
-        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
-        font-weight: 600;
-        white-space: nowrap;
-        text-align: center;
-      }
 
       /* 캡쳐 모드 버튼 */
       .btn-capture-mode {
         position: absolute;
-        bottom: 12px;
-        right: 12px;
+        bottom: 10px;
+        right: 10px;
         z-index: 10;
-        width: 40px;
-        height: 40px;
+        width: 32px;
+        height: 32px;
         background: rgba(255, 255, 255, 0.95);
         border: none;
-        border-radius: 8px;
+        border-radius: 6px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
         cursor: pointer;
-        font-size: 18px;
+        font-size: 14px;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -706,16 +599,7 @@
             </div>
 
             <!-- 줌 슬라이더 -->
-            <div class="zoom-slider-wrap">
-              <button class="zoom-btn" id="zoomInBtn" title="확대">+</button>
-            <div class="zoom-slider-track">
-                <div class="zoom-slider-inner">
-                  <input type="range" id="zoomSlider" min="1" max="21" step="0.25" value="12" />
-                </div>
-              </div>
-              <button class="zoom-btn" id="zoomOutBtn" title="축소">−</button>
-              <span class="zoom-level-label" id="zoomLabel">12</span>
-            </div>
+
           </div>
 
           <!-- 캡쳐 모드 버튼 (항상 표시) -->
@@ -792,66 +676,9 @@
       });
 
       // 줌 슬라이더
-      const zoomSlider = document.getElementById("zoomSlider");
-      const zoomLabel = document.getElementById("zoomLabel");
-      let isSliderUpdating = false;
-
-      // 줌 레벨 → 대략적 축척 (미터)
-      function getApproxScale(zoom) {
-        // 네이버 지도 줌 레벨별 대략적 축척 (가로 거리 기준)
-        const scales = {
-          1: "5000km", 2: "2000km", 3: "1000km", 4: "500km",
-          5: "200km", 6: "100km", 7: "50km", 8: "30km",
-          9: "20km", 10: "10km", 11: "5km", 12: "2km",
-          13: "1km", 14: "500m", 15: "300m", 16: "100m",
-          17: "50m", 18: "30m", 19: "20m", 20: "10m", 21: "5m"
-        };
-        const floor = Math.floor(zoom);
-        const ceil = Math.ceil(zoom);
-        if (floor === ceil) return scales[floor] || "";
-        // 소수점이면 두 단계 사이 표시
-        return `~${scales[floor] || ""}`;
-      }
-
-      function updateZoomDisplay(zoom) {
-        const displayVal = zoom % 1 === 0 ? zoom : parseFloat(zoom).toFixed(2);
-        const scale = getApproxScale(zoom);
-        zoomLabel.textContent = `${displayVal} (${scale})`;
-        zoomSlider.value = zoom;
-      }
-
-      zoomSlider.addEventListener("input", function () {
-        const val = parseFloat(this.value);
-        isSliderUpdating = true;
-        map.setZoom(val, false);
-        updateZoomDisplay(val);
-        setTimeout(() => { isSliderUpdating = false; }, 100);
-      });
-
-      document.getElementById("zoomInBtn").addEventListener("click", function () {
-        const current = parseFloat(zoomSlider.value);
-        const next = Math.min(21, +(current + 0.25).toFixed(2));
-        isSliderUpdating = true;
-        map.setZoom(next, false);
-        updateZoomDisplay(next);
-        setTimeout(() => { isSliderUpdating = false; }, 100);
-      });
-
-      document.getElementById("zoomOutBtn").addEventListener("click", function () {
-        const current = parseFloat(zoomSlider.value);
-        const next = Math.max(1, +(current - 0.25).toFixed(2));
-        isSliderUpdating = true;
-        map.setZoom(next, false);
-        updateZoomDisplay(next);
-        setTimeout(() => { isSliderUpdating = false; }, 100);
-      });
-
-      // 지도 줌 변경 시 슬라이더 동기화 (initMap 후에 리스너 추가)
+      // 지도 줌 변경 시 라벨 업데이트 (initMap 후에 리스너 추가)
       function setupZoomSync() {
         naver.maps.Event.addListener(map, "zoom_changed", function (zoom) {
-          if (!isSliderUpdating) {
-            updateZoomDisplay(zoom);
-          }
           updateLabelsVisibility(zoom);
         });
       }
