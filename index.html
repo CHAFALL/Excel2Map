@@ -738,6 +738,8 @@
         }
       }
 
+      const BATCH_SIZE = 50;
+
       function showAddressesOnMap(addressColumn, nameColumn, nameColumn2) {
         markers.forEach((markerData) => {
           markerData.marker.setMap(null);
@@ -747,63 +749,91 @@
         });
         markers = [];
 
-        showStatus("주소를 지도에 표시하는 중...", "info");
+        showStatus("주소를 지도에 표시하는 중... (0/" + fileData.length + ")", "info");
 
         let successCount = 0;
         let failCount = 0;
         let cacheHitCount = 0;
+        const totalCount = fileData.length;
         const bounds = new naver.maps.LatLngBounds();
         const geoCache = getGeoCache();
 
-        fileData.forEach((row, index) => {
-          const address = row[addressColumn];
-          if (!address) {
-            failCount++;
+        // 배치 단위로 나누기
+        const batches = [];
+        for (let i = 0; i < fileData.length; i += BATCH_SIZE) {
+          batches.push(
+            fileData.slice(i, i + BATCH_SIZE).map((row, idx) => ({
+              row: row,
+              originalIndex: i + idx,
+            }))
+          );
+        }
+
+        function processBatch(batchIndex) {
+          if (batchIndex >= batches.length) {
+            finishMapping(successCount, failCount, cacheHitCount, bounds);
             return;
           }
 
-          const addressKey = address.trim();
+          const batch = batches[batchIndex];
+          let batchDone = 0;
+          const batchTotal = batch.length;
 
-          if (geoCache[addressKey]) {
-            const cached = geoCache[addressKey];
-            cacheHitCount++;
-            placeMarker(cached.x, cached.y, address, row, nameColumn, nameColumn2, index, bounds);
-            successCount++;
+          showStatus(
+            `주소를 지도에 표시하는 중... (${Math.min((batchIndex) * BATCH_SIZE + batchTotal, totalCount)}/${totalCount}) - ${batchIndex + 1}/${batches.length} 배치`,
+            "info"
+          );
 
-            if (successCount + failCount === fileData.length) {
-              finishMapping(successCount, failCount, cacheHitCount, bounds);
+          batch.forEach((item) => {
+            const address = item.row[addressColumn];
+            if (!address) {
+              failCount++;
+              batchDone++;
+              if (batchDone === batchTotal) {
+                // 다음 배치를 약간의 딜레이 후 처리
+                setTimeout(() => processBatch(batchIndex + 1), 300);
+              }
+              return;
             }
-            return;
-          }
 
-          naver.maps.Service.geocode({ query: address }, function (status, response) {
+            const addressKey = address.trim();
+
+            // 캐시에 있으면 바로 사용
+            if (geoCache[addressKey]) {
+              const cached = geoCache[addressKey];
+              cacheHitCount++;
+              placeMarker(cached.x, cached.y, address, item.row, nameColumn, nameColumn2, item.originalIndex, bounds);
+              successCount++;
+              batchDone++;
+              if (batchDone === batchTotal) {
+                setTimeout(() => processBatch(batchIndex + 1), 300);
+              }
+              return;
+            }
+
+            // 캐시에 없으면 API 호출
+            naver.maps.Service.geocode({ query: address }, function (status, response) {
               if (status === naver.maps.Service.Status.ERROR) {
                 failCount++;
-                if (successCount + failCount === fileData.length) {
-                  finishMapping(successCount, failCount, cacheHitCount, bounds);
-                }
-                return;
-              }
-
-              if (response.v2.meta.totalCount === 0) {
+              } else if (response.v2.meta.totalCount === 0) {
                 failCount++;
-                if (successCount + failCount === fileData.length) {
-                  finishMapping(successCount, failCount, cacheHitCount, bounds);
-                }
-                return;
+              } else {
+                const result = response.v2.addresses[0];
+                setGeoCache(addressKey, { x: result.x, y: result.y });
+                placeMarker(result.x, result.y, address, item.row, nameColumn, nameColumn2, item.originalIndex, bounds);
+                successCount++;
               }
 
-              const item = response.v2.addresses[0];
-              setGeoCache(addressKey, { x: item.x, y: item.y });
-
-              placeMarker(item.x, item.y, address, row, nameColumn, nameColumn2, index, bounds);
-              successCount++;
-
-              if (successCount + failCount === fileData.length) {
-                finishMapping(successCount, failCount, cacheHitCount, bounds);
+              batchDone++;
+              if (batchDone === batchTotal) {
+                setTimeout(() => processBatch(batchIndex + 1), 300);
               }
             });
-        });
+          });
+        }
+
+        // 첫 번째 배치부터 시작
+        processBatch(0);
       }
 
       function placeMarker(x, y, address, row, nameColumn, nameColumn2, index, bounds) {
