@@ -190,12 +190,6 @@
         justify-content: space-between;
         align-items: center;
         margin-bottom: 15px;
-        transition: opacity 0.25s ease;
-      }
-
-      .map-controls.hidden {
-        opacity: 0;
-        pointer-events: none;
       }
 
       .btn-fullscreen {
@@ -241,15 +235,6 @@
       }
 
       /* 지도 타입 플로팅 메뉴 */
-      .map-overlay-ui {
-        transition: opacity 0.25s ease;
-      }
-
-      .map-overlay-ui.hidden {
-        opacity: 0;
-        pointer-events: none;
-      }
-
       .map-type-floating {
         position: absolute;
         top: 12px;
@@ -336,39 +321,6 @@
         font-size: 12px;
       }
 
-
-
-      /* 캡쳐 모드 버튼 */
-      .btn-capture-mode {
-        position: absolute;
-        bottom: 10px;
-        right: 10px;
-        z-index: 10;
-        width: 32px;
-        height: 32px;
-        background: rgba(255, 255, 255, 0.95);
-        border: none;
-        border-radius: 6px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-        cursor: pointer;
-        font-size: 14px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        backdrop-filter: blur(4px);
-        transition: all 0.2s;
-      }
-
-      .btn-capture-mode:hover {
-        background: #fff;
-        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
-      }
-
-      .btn-capture-mode.active {
-        background: #03c75a;
-        color: white;
-      }
-
       /* 전체화면 스타일 */
       .map-container.fullscreen {
         position: fixed;
@@ -429,6 +381,14 @@
         pointer-events: none;
         transform: translate(-50%, -100%);
         margin-top: -8px;
+        text-align: center;
+        line-height: 1.3;
+      }
+
+      .marker-label .sub-label {
+        font-size: 11px;
+        font-weight: 500;
+        color: #666;
       }
 
       /* 모바일 반응형 */
@@ -494,8 +454,6 @@
           width: 100%;
         }
 
-
-
         .map-container.fullscreen .map-controls {
           position: absolute;
           top: 12px;
@@ -521,8 +479,6 @@
         #map {
           height: 300px;
         }
-
-
       }
     </style>
   </head>
@@ -563,6 +519,13 @@
             </select>
           </div>
 
+          <div class="select-group">
+            <label for="nameColumn2">이름 열 2 선택 (선택사항):</label>
+            <select id="nameColumn2">
+              <option value="">-- 선택 안 함 --</option>
+            </select>
+          </div>
+
           <button id="showMapBtn" class="btn-show-map">🗺️ 지도에 표시</button>
         </div>
 
@@ -579,32 +542,23 @@
 
         <!-- 지도 타입 플로팅 메뉴 (지도 위에 위치) -->
         <div style="position: relative;">
-          <div class="map-overlay-ui" id="mapOverlayUI">
-            <div class="map-type-floating">
-              <button class="map-type-toggle" id="mapTypeToggle" title="지도 유형">🗺️</button>
-              <div class="map-type-menu" id="mapTypeMenu">
-                <button class="map-type-btn active" data-type="NORMAL">
-                  <span class="check-icon">✓</span> 일반지도
-                </button>
-                <button class="map-type-btn" data-type="SATELLITE">
-                  <span class="check-icon"></span> 위성지도
-                </button>
-                <button class="map-type-btn" data-type="HYBRID">
-                  <span class="check-icon"></span> 위성+라벨
-                </button>
-                <button class="map-type-btn" data-type="TERRAIN">
-                  <span class="check-icon"></span> 지형지도
-                </button>
-              </div>
+          <div class="map-type-floating">
+            <button class="map-type-toggle" id="mapTypeToggle" title="지도 유형">🗺️</button>
+            <div class="map-type-menu" id="mapTypeMenu">
+              <button class="map-type-btn active" data-type="NORMAL">
+                <span class="check-icon">✓</span> 일반지도
+              </button>
+              <button class="map-type-btn" data-type="SATELLITE">
+                <span class="check-icon"></span> 위성지도
+              </button>
+              <button class="map-type-btn" data-type="HYBRID">
+                <span class="check-icon"></span> 위성+라벨
+              </button>
+              <button class="map-type-btn" data-type="TERRAIN">
+                <span class="check-icon"></span> 지형지도
+              </button>
             </div>
-
-            <!-- 줌 슬라이더 -->
-
           </div>
-
-          <!-- 캡쳐 모드 버튼 (항상 표시) -->
-          <button class="btn-capture-mode" id="captureModeBtn" title="캡쳐 모드 (UI 숨기기)">📷</button>
-
           <div id="map"></div>
         </div>
       </div>
@@ -620,11 +574,12 @@
         const mapOptions = {
           center: new naver.maps.LatLng(37.5665, 126.978),
           zoom: 12,
-          scrollWheel: true,
-          zoomControl: false,
         };
         map = new naver.maps.Map("map", mapOptions);
-        setupZoomSync();
+
+        naver.maps.Event.addListener(map, "zoom_changed", function (zoom) {
+          updateLabelsVisibility(zoom);
+        });
       }
 
       function updateLabelsVisibility(zoom) {
@@ -653,7 +608,6 @@
         mapTypeMenu.classList.toggle("open");
       });
 
-      // 바깥 클릭 시 메뉴 닫기
       document.addEventListener("click", function () {
         mapTypeMenu.classList.remove("open");
       });
@@ -673,35 +627,6 @@
           map.setMapTypeId(naver.maps.MapTypeId[this.dataset.type]);
           mapTypeMenu.classList.remove("open");
         });
-      });
-
-      // 줌 슬라이더
-      // 지도 줌 변경 시 라벨 업데이트 (initMap 후에 리스너 추가)
-      function setupZoomSync() {
-        naver.maps.Event.addListener(map, "zoom_changed", function (zoom) {
-          updateLabelsVisibility(zoom);
-        });
-      }
-
-      // 캡쳐 모드
-      const captureModeBtn = document.getElementById("captureModeBtn");
-      const mapOverlayUI = document.getElementById("mapOverlayUI");
-      let isCaptureMode = false;
-
-      captureModeBtn.addEventListener("click", function () {
-        isCaptureMode = !isCaptureMode;
-        const mapControls = document.querySelector(".map-controls");
-        if (isCaptureMode) {
-          mapOverlayUI.classList.add("hidden");
-          mapControls.classList.add("hidden");
-          this.classList.add("active");
-          this.title = "캡쳐 모드 해제";
-        } else {
-          mapOverlayUI.classList.remove("hidden");
-          mapControls.classList.remove("hidden");
-          this.classList.remove("active");
-          this.title = "캡쳐 모드 (UI 숨기기)";
-        }
       });
 
       document.getElementById("fileInput").addEventListener("change", function (e) {
@@ -745,10 +670,12 @@
 
         const addressSelect = document.getElementById("addressColumn");
         const nameSelect = document.getElementById("nameColumn");
+        const nameSelect2 = document.getElementById("nameColumn2");
 
         addressSelect.innerHTML =
           '<option value="">-- 주소가 있는 열을 선택하세요 --</option>';
         nameSelect.innerHTML = '<option value="">-- 선택 안 함 --</option>';
+        nameSelect2.innerHTML = '<option value="">-- 선택 안 함 --</option>';
 
         columns.forEach((col) => {
           const option1 = document.createElement("option");
@@ -760,6 +687,11 @@
           option2.value = col;
           option2.textContent = col;
           nameSelect.appendChild(option2);
+
+          const option3 = document.createElement("option");
+          option3.value = col;
+          option3.textContent = col;
+          nameSelect2.appendChild(option3);
         });
 
         document.getElementById("columnSelection").classList.add("active");
@@ -777,13 +709,14 @@
       document.getElementById("showMapBtn").addEventListener("click", function () {
           const addressColumn = document.getElementById("addressColumn").value;
           const nameColumn = document.getElementById("nameColumn").value;
+          const nameColumn2 = document.getElementById("nameColumn2").value;
 
           if (!addressColumn) {
             showStatus("주소 열을 선택해주세요.", "error");
             return;
           }
 
-          showAddressesOnMap(addressColumn, nameColumn);
+          showAddressesOnMap(addressColumn, nameColumn, nameColumn2);
         });
 
       // Geocoding 캐시 관련 함수
@@ -805,7 +738,7 @@
         }
       }
 
-      function showAddressesOnMap(addressColumn, nameColumn) {
+      function showAddressesOnMap(addressColumn, nameColumn, nameColumn2) {
         markers.forEach((markerData) => {
           markerData.marker.setMap(null);
           if (markerData.labelOverlay) {
@@ -831,11 +764,10 @@
 
           const addressKey = address.trim();
 
-          // 캐시에 있으면 API 호출 없이 바로 사용
           if (geoCache[addressKey]) {
             const cached = geoCache[addressKey];
             cacheHitCount++;
-            placeMarker(cached.x, cached.y, address, row, nameColumn, index, bounds);
+            placeMarker(cached.x, cached.y, address, row, nameColumn, nameColumn2, index, bounds);
             successCount++;
 
             if (successCount + failCount === fileData.length) {
@@ -844,7 +776,6 @@
             return;
           }
 
-          // 캐시에 없으면 API 호출
           naver.maps.Service.geocode({ query: address }, function (status, response) {
               if (status === naver.maps.Service.Status.ERROR) {
                 failCount++;
@@ -863,10 +794,9 @@
               }
 
               const item = response.v2.addresses[0];
-              // 캐시에 저장
               setGeoCache(addressKey, { x: item.x, y: item.y });
 
-              placeMarker(item.x, item.y, address, row, nameColumn, index, bounds);
+              placeMarker(item.x, item.y, address, row, nameColumn, nameColumn2, index, bounds);
               successCount++;
 
               if (successCount + failCount === fileData.length) {
@@ -876,7 +806,7 @@
         });
       }
 
-      function placeMarker(x, y, address, row, nameColumn, index, bounds) {
+      function placeMarker(x, y, address, row, nameColumn, nameColumn2, index, bounds) {
         const position = new naver.maps.LatLng(parseFloat(y), parseFloat(x));
 
         const marker = new naver.maps.Marker({
@@ -889,9 +819,16 @@
         });
 
         const name = nameColumn ? row[nameColumn] : `위치 ${index + 1}`;
+        const name2 = nameColumn2 ? row[nameColumn2] : "";
+
+        let infoContent = `<div style="padding:10px;"><strong>${name}</strong>`;
+        if (name2) {
+          infoContent += `<br><span style="color:#666;">${name2}</span>`;
+        }
+        infoContent += `<br>${address}</div>`;
 
         const infoWindow = new naver.maps.InfoWindow({
-          content: `<div style="padding:10px;"><strong>${name}</strong><br>${address}</div>`,
+          content: infoContent,
         });
 
         naver.maps.Event.addListener(marker, "click", function () {
@@ -903,15 +840,26 @@
         });
 
         let labelOverlay = null;
-        if (nameColumn && row[nameColumn]) {
+        const hasName1 = nameColumn && row[nameColumn];
+        const hasName2 = nameColumn2 && row[nameColumn2];
+
+        if (hasName1 || hasName2) {
           const currentZoom = map.getZoom();
           const showLabel = currentZoom >= LABEL_ZOOM_THRESHOLD;
+
+          let labelHtml = "";
+          if (hasName1) {
+            labelHtml += row[nameColumn];
+          }
+          if (hasName2) {
+            labelHtml += `<br><span class="sub-label">${row[nameColumn2]}</span>`;
+          }
 
           labelOverlay = new naver.maps.Marker({
             position: position,
             map: map,
             icon: {
-              content: `<div class="marker-label" style="display: ${showLabel ? "block" : "none"};">${row[nameColumn]}</div>`,
+              content: `<div class="marker-label" style="display: ${showLabel ? "block" : "none"};">${labelHtml}</div>`,
               anchor: new naver.maps.Point(0, 5),
             },
             clickable: false,
