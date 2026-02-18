@@ -240,6 +240,10 @@
         top: 12px;
         left: 12px;
         z-index: 10;
+        display: flex;
+        flex-direction: row;
+        align-items: flex-start;
+        gap: 6px;
       }
 
       .map-type-toggle {
@@ -391,6 +395,129 @@
         color: #444;        /* 더 진한 회색으로 변경 */
       }
 
+      /* 커스텀 컨트롤 패널 */
+      .custom-controls-toggle {
+        width: 40px;
+        height: 40px;
+        background: rgba(255, 255, 255, 0.95);
+        border: none;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        cursor: pointer;
+        font-size: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        backdrop-filter: blur(4px);
+        transition: all 0.2s;
+      }
+
+      .custom-controls-toggle:hover {
+        background: #fff;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
+      }
+
+      .custom-controls-menu {
+        position: absolute;
+        top: 46px;
+        left: 0;
+        background: rgba(255, 255, 255, 0.97);
+        border-radius: 10px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+        backdrop-filter: blur(4px);
+        padding: 14px 16px;
+        min-width: 220px;
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(-6px);
+        transition: all 0.2s ease;
+      }
+
+      .custom-controls-menu.open {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+      }
+
+      .custom-controls-menu h4 {
+        font-size: 12px;
+        font-weight: 700;
+        color: #888;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 12px;
+      }
+
+      .slider-group {
+        margin-bottom: 14px;
+      }
+
+      .slider-group:last-child {
+        margin-bottom: 0;
+      }
+
+      .slider-label-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 6px;
+      }
+
+      .slider-label-row span:first-child {
+        font-size: 13px;
+        font-weight: 600;
+        color: #333;
+      }
+
+      .slider-value-badge {
+        font-size: 12px;
+        font-weight: 700;
+        color: #03c75a;
+        background: #e8f8f0;
+        padding: 2px 8px;
+        border-radius: 10px;
+        min-width: 36px;
+        text-align: center;
+      }
+
+      input[type="range"] {
+        -webkit-appearance: none;
+        width: 100%;
+        height: 4px;
+        border-radius: 2px;
+        background: #ddd;
+        outline: none;
+        cursor: pointer;
+      }
+
+      input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: #03c75a;
+        cursor: pointer;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+        transition: background 0.2s;
+      }
+
+      input[type="range"]::-webkit-slider-thumb:hover {
+        background: #02b350;
+      }
+
+      .slider-divider {
+        border: none;
+        border-top: 1px solid #eee;
+        margin: 12px 0;
+      }
+
+      .map-container.fullscreen .map-type-floating {
+        position: fixed;
+        top: 12px;
+        left: 12px;
+        z-index: 10001;
+      }
+
       /* 모바일 반응형 */
       @media (max-width: 768px) {
         .container {
@@ -540,25 +667,63 @@
           <button id="fullscreenBtn" class="btn-fullscreen">🔍 전체화면</button>
         </div>
 
-        <!-- 지도 타입 플로팅 메뉴 (지도 위에 위치) -->
+        <!-- 지도 영역 -->
         <div style="position: relative;">
+
+          <!-- 좌측 상단: 지도 타입 + 설정 버튼 묶음 -->
           <div class="map-type-floating">
-            <button class="map-type-toggle" id="mapTypeToggle" title="지도 유형">🗺️</button>
-            <div class="map-type-menu" id="mapTypeMenu">
-              <button class="map-type-btn active" data-type="NORMAL">
-                <span class="check-icon">✓</span> 일반지도
-              </button>
-              <button class="map-type-btn" data-type="SATELLITE">
-                <span class="check-icon"></span> 위성지도
-              </button>
-              <button class="map-type-btn" data-type="HYBRID">
-                <span class="check-icon"></span> 위성+라벨
-              </button>
-              <button class="map-type-btn" data-type="TERRAIN">
-                <span class="check-icon"></span> 지형지도
-              </button>
+
+            <!-- 🗺️ 지도 타입 토글 -->
+            <div style="position: relative;">
+              <button class="map-type-toggle" id="mapTypeToggle" title="지도 유형">🗺️</button>
+              <div class="map-type-menu" id="mapTypeMenu">
+                <button class="map-type-btn active" data-type="NORMAL">
+                  <span class="check-icon">✓</span> 일반지도
+                </button>
+                <button class="map-type-btn" data-type="SATELLITE">
+                  <span class="check-icon"></span> 위성지도
+                </button>
+                <button class="map-type-btn" data-type="HYBRID">
+                  <span class="check-icon"></span> 위성+라벨
+                </button>
+                <button class="map-type-btn" data-type="TERRAIN">
+                  <span class="check-icon"></span> 지형지도
+                </button>
+              </div>
             </div>
-          </div>
+
+            <!-- ⚙️ 마커/라벨 크기 설정 -->
+            <div style="position: relative;">
+              <button class="custom-controls-toggle" id="customControlsToggle" title="마커/라벨 크기 조절">⚙️</button>
+              <div class="custom-controls-menu" id="customControlsMenu">
+                <h4>🎨 표시 설정</h4>
+                <div class="slider-group">
+                  <div class="slider-label-row">
+                    <span>마커 크기</span>
+                    <span class="slider-value-badge" id="markerSizeVal">17px</span>
+                  </div>
+                  <input type="range" id="markerSizeSlider" min="6" max="40" value="17" step="1">
+                </div>
+                <hr class="slider-divider">
+                <div class="slider-group">
+                  <div class="slider-label-row">
+                    <span>라벨 크기 (이름 1)</span>
+                    <span class="slider-value-badge" id="labelSizeVal">13px</span>
+                  </div>
+                  <input type="range" id="labelSizeSlider" min="8" max="28" value="13" step="1">
+                </div>
+                <div class="slider-group">
+                  <div class="slider-label-row">
+                    <span>라벨 크기 (이름 2)</span>
+                    <span class="slider-value-badge" id="subLabelSizeVal">13px</span>
+                  </div>
+                  <input type="range" id="subLabelSizeSlider" min="8" max="28" value="13" step="1">
+                </div>
+              </div>
+            </div>
+
+          </div><!-- /.map-type-floating -->
+
           <div id="map"></div>
         </div>
       </div>
@@ -569,6 +734,95 @@
       let map = null;
       let markers = [];
       const LABEL_ZOOM_THRESHOLD = 16;
+
+      // 커스텀 크기 변수
+      let markerSize = 17;
+      let labelFontSize = 13;
+      let subLabelFontSize = 13;
+
+      // 커스텀 컨트롤 패널 토글
+      const customControlsToggle = document.getElementById("customControlsToggle");
+      const customControlsMenu = document.getElementById("customControlsMenu");
+
+      customControlsToggle.addEventListener("click", function (e) {
+        e.stopPropagation();
+        customControlsMenu.classList.toggle("open");
+      });
+
+      document.addEventListener("click", function () {
+        customControlsMenu.classList.remove("open");
+      });
+
+      customControlsMenu.addEventListener("click", function (e) {
+        e.stopPropagation();
+      });
+
+      // 마커 크기 슬라이더
+      document.getElementById("markerSizeSlider").addEventListener("input", function () {
+        markerSize = parseInt(this.value);
+        document.getElementById("markerSizeVal").textContent = markerSize + "px";
+        updateAllMarkerSizes();
+      });
+
+      // 라벨 크기 슬라이더
+      document.getElementById("labelSizeSlider").addEventListener("input", function () {
+        labelFontSize = parseInt(this.value);
+        document.getElementById("labelSizeVal").textContent = labelFontSize + "px";
+        updateAllLabelSizes();
+      });
+
+      // 서브 라벨 크기 슬라이더
+      document.getElementById("subLabelSizeSlider").addEventListener("input", function () {
+        subLabelFontSize = parseInt(this.value);
+        document.getElementById("subLabelSizeVal").textContent = subLabelFontSize + "px";
+        updateAllLabelSizes();
+      });
+
+      function updateAllMarkerSizes() {
+        const half = markerSize / 2;
+        markers.forEach((markerData) => {
+          markerData.marker.setIcon({
+            content: `<div style="width: ${markerSize}px; height: ${markerSize}px; background: #ff0000; border: 2px solid #fff; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
+            anchor: new naver.maps.Point(half, half),
+          });
+        });
+      }
+
+      function updateAllLabelSizes() {
+        const currentZoom = map ? map.getZoom() : 0;
+        const showLabels = currentZoom >= LABEL_ZOOM_THRESHOLD;
+        markers.forEach((markerData) => {
+          if (markerData.labelOverlay) {
+            const icon = markerData.labelOverlay.getIcon();
+            // font-size inline 스타일 교체
+            let newContent = icon.content
+              .replace(/font-size:\s*[\d.]+px(?=;[^"]*class="marker-label)/, `font-size: ${labelFontSize}px`)
+              .replace(/class="sub-label" style="font-size:\s*[\d.]+px/, `class="sub-label" style="font-size: ${subLabelFontSize}px`);
+
+            // 방법이 안 되면 data- 속성 방식으로 재생성
+            // labelOverlay의 _labelHtml을 이용해 재생성
+            if (markerData.labelHtml !== undefined) {
+              const display = showLabels ? "block" : "none";
+              newContent = buildLabelContent(markerData.labelHtml, display);
+            }
+
+            markerData.labelOverlay.setIcon({
+              content: newContent,
+              anchor: new naver.maps.Point(0, 5),
+            });
+          }
+        });
+      }
+
+      function buildLabelContent(labelHtml, display) {
+        // labelHtml: 이름1 텍스트 + (있으면) <br><span class="sub-label">이름2</span>
+        // font-size를 inline으로 주입
+        const processedHtml = labelHtml.replace(
+          /(<span class="sub-label">)/,
+          `<span class="sub-label" style="font-size: ${subLabelFontSize}px;">`
+        );
+        return `<div class="marker-label" style="display: ${display}; font-size: ${labelFontSize}px;">${processedHtml}</div>`;
+      }
 
       function initMap() {
         const mapOptions = {
@@ -585,12 +839,8 @@
       function updateLabelsVisibility(zoom) {
         const showLabels = zoom >= LABEL_ZOOM_THRESHOLD;
         markers.forEach((markerData) => {
-          if (markerData.labelOverlay) {
-            const icon = markerData.labelOverlay.getIcon();
-            const newContent = icon.content.replace(
-              /display:\s*(block|none)/,
-              `display: ${showLabels ? "block" : "none"}`
-            );
+          if (markerData.labelOverlay && markerData.labelHtml !== undefined) {
+            const newContent = buildLabelContent(markerData.labelHtml, showLabels ? "block" : "none");
             markerData.labelOverlay.setIcon({
               content: newContent,
               anchor: new naver.maps.Point(0, 5),
@@ -839,12 +1089,13 @@
       function placeMarker(x, y, address, row, nameColumn, nameColumn2, index, bounds) {
         const position = new naver.maps.LatLng(parseFloat(y), parseFloat(x));
 
+        const half = markerSize / 2;
         const marker = new naver.maps.Marker({
           position: position,
           map: map,
           icon: {
-            content: '<div style="width: 17px; height: 17px; background: #ff0000; border: 2px solid #fff; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>',
-            anchor: new naver.maps.Point(12, 12),
+            content: `<div style="width: ${markerSize}px; height: ${markerSize}px; background: #ff0000; border: 2px solid #fff; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
+            anchor: new naver.maps.Point(half, half),
           },
         });
 
@@ -885,18 +1136,22 @@
             labelHtml += `<br><span class="sub-label">${row[nameColumn2]}</span>`;
           }
 
+          const labelContent = buildLabelContent(labelHtml, showLabel ? "block" : "none");
+
           labelOverlay = new naver.maps.Marker({
             position: position,
             map: map,
             icon: {
-              content: `<div class="marker-label" style="display: ${showLabel ? "block" : "none"};">${labelHtml}</div>`,
+              content: labelContent,
               anchor: new naver.maps.Point(0, 5),
             },
             clickable: false,
           });
         }
 
-        markers.push({ marker: marker, labelOverlay: labelOverlay });
+        markers.push({ marker: marker, labelOverlay: labelOverlay, labelHtml: (hasName1 || hasName2) ? (
+          (hasName1 ? row[nameColumn] : "") + (hasName2 ? `<br><span class="sub-label">${row[nameColumn2]}</span>` : "")
+        ) : undefined });
         bounds.extend(position);
       }
 
