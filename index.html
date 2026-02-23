@@ -390,9 +390,9 @@
       }
 
       .marker-label .sub-label {
-        font-size: 13px;    /* 이름 열 선택과 동일한 크기로 변경 */
-        font-weight: 700;   /* 동일한 굵기 */
-        color: #444;        /* 더 진한 회색으로 변경 */
+        font-size: 13px;
+        font-weight: 700;
+        color: #444;
       }
 
       /* 커스텀 컨트롤 패널 */
@@ -740,6 +740,18 @@
       let labelFontSize = 13;
       let subLabelFontSize = 13;
 
+      // ✅ 주소 전처리 함수
+      function cleanAddress(address) {
+        if (!address) return address;
+        return String(address)
+          .replace(/번지/g, '')       // "번지" 제거
+          .replace(/\([^)]*\)/g, '') // (괄호 안 내용) 반복 제거
+          .replace(/\([^)]*\)/g, '') // 중첩 괄호 한 번 더 제거
+          .replace(/,.*$/, '')       // 쉼표 이후 내용 제거
+          .replace(/\s+/g, ' ')      // 연속 공백 정리
+          .trim();
+      }
+
       // 커스텀 컨트롤 패널 토글
       const customControlsToggle = document.getElementById("customControlsToggle");
       const customControlsMenu = document.getElementById("customControlsMenu");
@@ -794,13 +806,10 @@
         markers.forEach((markerData) => {
           if (markerData.labelOverlay) {
             const icon = markerData.labelOverlay.getIcon();
-            // font-size inline 스타일 교체
             let newContent = icon.content
               .replace(/font-size:\s*[\d.]+px(?=;[^"]*class="marker-label)/, `font-size: ${labelFontSize}px`)
               .replace(/class="sub-label" style="font-size:\s*[\d.]+px/, `class="sub-label" style="font-size: ${subLabelFontSize}px`);
 
-            // 방법이 안 되면 data- 속성 방식으로 재생성
-            // labelOverlay의 _labelHtml을 이용해 재생성
             if (markerData.labelHtml !== undefined) {
               const display = showLabels ? "block" : "none";
               newContent = buildLabelContent(markerData.labelHtml, display);
@@ -815,8 +824,6 @@
       }
 
       function buildLabelContent(labelHtml, display) {
-        // labelHtml: 이름1 텍스트 + (있으면) <br><span class="sub-label">이름2</span>
-        // font-size를 inline으로 주입
         const processedHtml = labelHtml.replace(
           /(<span class="sub-label">)/,
           `<span class="sub-label" style="font-size: ${subLabelFontSize}px;">`
@@ -1035,24 +1042,27 @@
           );
 
           batch.forEach((item) => {
-            const address = item.row[addressColumn];
-            if (!address) {
+            const rawAddress = item.row[addressColumn];
+
+            if (!rawAddress) {
               failCount++;
               batchDone++;
               if (batchDone === batchTotal) {
-                // 다음 배치를 약간의 딜레이 후 처리
                 setTimeout(() => processBatch(batchIndex + 1), 300);
               }
               return;
             }
 
-            const addressKey = address.trim();
+            // ✅ 주소 전처리: "번지" 제거
+            const address = cleanAddress(rawAddress);
+            const addressKey = address;
 
             // 캐시에 있으면 바로 사용
             if (geoCache[addressKey]) {
               const cached = geoCache[addressKey];
               cacheHitCount++;
-              placeMarker(cached.x, cached.y, address, item.row, nameColumn, nameColumn2, item.originalIndex, bounds);
+              // InfoWindow에는 원본 주소 표시
+              placeMarker(cached.x, cached.y, rawAddress, address, item.row, nameColumn, nameColumn2, item.originalIndex, bounds);
               successCount++;
               batchDone++;
               if (batchDone === batchTotal) {
@@ -1064,13 +1074,16 @@
             // 캐시에 없으면 API 호출
             naver.maps.Service.geocode({ query: address }, function (status, response) {
               if (status === naver.maps.Service.Status.ERROR) {
+                console.error('Geocoding API 오류:', address);
                 failCount++;
               } else if (response.v2.meta.totalCount === 0) {
+                console.warn('주소 검색 결과 없음:', address);
                 failCount++;
               } else {
                 const result = response.v2.addresses[0];
                 setGeoCache(addressKey, { x: result.x, y: result.y });
-                placeMarker(result.x, result.y, address, item.row, nameColumn, nameColumn2, item.originalIndex, bounds);
+                // InfoWindow에는 원본 주소 표시
+                placeMarker(result.x, result.y, rawAddress, address, item.row, nameColumn, nameColumn2, item.originalIndex, bounds);
                 successCount++;
               }
 
@@ -1086,7 +1099,8 @@
         processBatch(0);
       }
 
-      function placeMarker(x, y, address, row, nameColumn, nameColumn2, index, bounds) {
+      // ✅ rawAddress: InfoWindow 표시용 원본 주소 / cleanedAddress: Geocoding에 사용한 전처리 주소
+      function placeMarker(x, y, rawAddress, cleanedAddress, row, nameColumn, nameColumn2, index, bounds) {
         const position = new naver.maps.LatLng(parseFloat(y), parseFloat(x));
 
         const half = markerSize / 2;
@@ -1102,11 +1116,12 @@
         const name = nameColumn ? row[nameColumn] : `위치 ${index + 1}`;
         const name2 = nameColumn2 ? row[nameColumn2] : "";
 
+        // InfoWindow에는 원본 주소(rawAddress) 표시
         let infoContent = `<div style="padding:10px;"><strong>${name}</strong>`;
         if (name2) {
           infoContent += `<br><span style="color:#666;">${name2}</span>`;
         }
-        infoContent += `<br>${address}</div>`;
+        infoContent += `<br>${rawAddress}</div>`;
 
         const infoWindow = new naver.maps.InfoWindow({
           content: infoContent,
@@ -1149,9 +1164,14 @@
           });
         }
 
-        markers.push({ marker: marker, labelOverlay: labelOverlay, labelHtml: (hasName1 || hasName2) ? (
-          (hasName1 ? row[nameColumn] : "") + (hasName2 ? `<br><span class="sub-label">${row[nameColumn2]}</span>` : "")
-        ) : undefined });
+        markers.push({
+          marker: marker,
+          labelOverlay: labelOverlay,
+          labelHtml: (hasName1 || hasName2) ? (
+            (hasName1 ? row[nameColumn] : "") +
+            (hasName2 ? `<br><span class="sub-label">${row[nameColumn2]}</span>` : "")
+          ) : undefined
+        });
         bounds.extend(position);
       }
 
