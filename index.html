@@ -743,13 +743,35 @@
       // ✅ 주소 전처리 함수
       function cleanAddress(address) {
         if (!address) return address;
-        return String(address)
-          .replace(/번지/g, '')       // "번지" 제거
-          .replace(/\([^)]*\)/g, '') // (괄호 안 내용) 반복 제거
-          .replace(/\([^)]*\)/g, '') // 중첩 괄호 한 번 더 제거
-          .replace(/,.*$/, '')       // 쉼표 이후 내용 제거
-          .replace(/\s+/g, ' ')      // 연속 공백 정리
-          .trim();
+        let addr = String(address).trim();
+
+        // 1. 괄호 안 내용 제거 (중첩 포함, 반복 적용)
+        for (let i = 0; i < 3; i++) {
+          addr = addr.replace(/\([^)]*\)/g, '');
+        }
+
+        // 2. 쉼표 이후 제거
+        addr = addr.replace(/,.*$/, '');
+
+        // 3. 슬래시 이후 제거
+        addr = addr.replace(/\/.*$/, '');
+
+        // 4. "번지" 제거
+        addr = addr.replace(/번지/g, '');
+
+        // 5. 도로명주소 패턴: "로/길/대로 번지" 이후 텍스트 제거
+        //    예) "후포삼율로 46-4 401호" → "후포삼율로 46-4"
+        //    예) "상밤터1길 15 GS25후포터미널점" → "상밤터1길 15"
+        addr = addr.replace(/((?:로|길|대로)\s+\d+(?:-\d+)?)\s+.+$/, '$1');
+
+        // 6. 지번주소 패턴: "리/동 번지" 이후 텍스트 제거
+        //    예) "삼율리 891-12 삼율저수지관정" → "삼율리 891-12"
+        addr = addr.replace(/((?:리|동)\s+(?:산\s*)?\d+(?:-\d+)?)\s+.+$/, '$1');
+
+        // 7. 연속 공백 정리
+        addr = addr.replace(/\s+/g, ' ').trim();
+
+        return addr;
       }
 
       // 커스텀 컨트롤 패널 토글
