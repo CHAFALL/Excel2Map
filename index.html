@@ -395,6 +395,12 @@
         color: #444;
       }
 
+      .marker-label .sub-label-2 {
+        font-size: 13px;
+        font-weight: 700;
+        color: #555;
+      }
+
       /* 커스텀 컨트롤 패널 */
       .custom-controls-toggle {
         width: 40px;
@@ -653,6 +659,13 @@
             </select>
           </div>
 
+          <div class="select-group">
+            <label for="nameColumn3">이름 열 3 선택 (선택사항):</label>
+            <select id="nameColumn3">
+              <option value="">-- 선택 안 함 --</option>
+            </select>
+          </div>
+
           <button id="showMapBtn" class="btn-show-map">🗺️ 지도에 표시</button>
         </div>
 
@@ -719,6 +732,13 @@
                   </div>
                   <input type="range" id="subLabelSizeSlider" min="8" max="28" value="13" step="1">
                 </div>
+                <div class="slider-group">
+                  <div class="slider-label-row">
+                    <span>라벨 크기 (이름 3)</span>
+                    <span class="slider-value-badge" id="subLabelSize2Val">13px</span>
+                  </div>
+                  <input type="range" id="subLabelSize2Slider" min="8" max="28" value="13" step="1">
+                </div>
               </div>
             </div>
 
@@ -739,6 +759,7 @@
       let markerSize = 17;
       let labelFontSize = 13;
       let subLabelFontSize = 13;
+      let subLabelFontSize2 = 13;
 
       // ✅ 주소 전처리 함수
       function cleanAddress(address) {
@@ -803,6 +824,13 @@
         updateAllLabelSizes();
       });
 
+      // 서브 라벨 2 크기 슬라이더
+      document.getElementById("subLabelSize2Slider").addEventListener("input", function () {
+        subLabelFontSize2 = parseInt(this.value);
+        document.getElementById("subLabelSize2Val").textContent = subLabelFontSize2 + "px";
+        updateAllLabelSizes();
+      });
+
       function updateAllMarkerSizes() {
         const half = markerSize / 2;
         markers.forEach((markerData) => {
@@ -837,9 +865,13 @@
       }
 
       function buildLabelContent(labelHtml, display) {
-        const processedHtml = labelHtml.replace(
+        let processedHtml = labelHtml.replace(
           /(<span class="sub-label">)/,
           `<span class="sub-label" style="font-size: ${subLabelFontSize}px;">`
+        );
+        processedHtml = processedHtml.replace(
+          /(<span class="sub-label-2">)/,
+          `<span class="sub-label-2" style="font-size: ${subLabelFontSize2}px;">`
         );
         return `<div class="marker-label" style="display: ${display}; font-size: ${labelFontSize}px;">${processedHtml}</div>`;
       }
@@ -941,11 +973,13 @@
         const addressSelect = document.getElementById("addressColumn");
         const nameSelect = document.getElementById("nameColumn");
         const nameSelect2 = document.getElementById("nameColumn2");
+        const nameSelect3 = document.getElementById("nameColumn3");
 
         addressSelect.innerHTML =
           '<option value="">-- 주소가 있는 열을 선택하세요 --</option>';
         nameSelect.innerHTML = '<option value="">-- 선택 안 함 --</option>';
         nameSelect2.innerHTML = '<option value="">-- 선택 안 함 --</option>';
+        nameSelect3.innerHTML = '<option value="">-- 선택 안 함 --</option>';
 
         columns.forEach((col) => {
           const option1 = document.createElement("option");
@@ -962,6 +996,11 @@
           option3.value = col;
           option3.textContent = col;
           nameSelect2.appendChild(option3);
+
+          const option4 = document.createElement("option");
+          option4.value = col;
+          option4.textContent = col;
+          nameSelect3.appendChild(option4);
         });
 
         document.getElementById("columnSelection").classList.add("active");
@@ -980,13 +1019,14 @@
           const addressColumn = document.getElementById("addressColumn").value;
           const nameColumn = document.getElementById("nameColumn").value;
           const nameColumn2 = document.getElementById("nameColumn2").value;
+          const nameColumn3 = document.getElementById("nameColumn3").value;
 
           if (!addressColumn) {
             showStatus("주소 열을 선택해주세요.", "error");
             return;
           }
 
-          showAddressesOnMap(addressColumn, nameColumn, nameColumn2);
+          showAddressesOnMap(addressColumn, nameColumn, nameColumn2, nameColumn3);
         });
 
       // Geocoding 캐시 관련 함수
@@ -1010,7 +1050,7 @@
 
       const BATCH_SIZE = 50;
 
-      function showAddressesOnMap(addressColumn, nameColumn, nameColumn2) {
+      function showAddressesOnMap(addressColumn, nameColumn, nameColumn2, nameColumn3) {
         markers.forEach((markerData) => {
           markerData.marker.setMap(null);
           if (markerData.labelOverlay) {
@@ -1075,7 +1115,7 @@
               const cached = geoCache[addressKey];
               cacheHitCount++;
               // InfoWindow에는 원본 주소 표시
-              placeMarker(cached.x, cached.y, rawAddress, address, item.row, nameColumn, nameColumn2, item.originalIndex, bounds);
+              placeMarker(cached.x, cached.y, rawAddress, address, item.row, nameColumn, nameColumn2, nameColumn3, item.originalIndex, bounds);
               successCount++;
               batchDone++;
               if (batchDone === batchTotal) {
@@ -1096,7 +1136,7 @@
                 const result = response.v2.addresses[0];
                 setGeoCache(addressKey, { x: result.x, y: result.y });
                 // InfoWindow에는 원본 주소 표시
-                placeMarker(result.x, result.y, rawAddress, address, item.row, nameColumn, nameColumn2, item.originalIndex, bounds);
+                placeMarker(result.x, result.y, rawAddress, address, item.row, nameColumn, nameColumn2, nameColumn3, item.originalIndex, bounds);
                 successCount++;
               }
 
@@ -1113,7 +1153,7 @@
       }
 
       // ✅ rawAddress: InfoWindow 표시용 원본 주소 / cleanedAddress: Geocoding에 사용한 전처리 주소
-      function placeMarker(x, y, rawAddress, cleanedAddress, row, nameColumn, nameColumn2, index, bounds) {
+      function placeMarker(x, y, rawAddress, cleanedAddress, row, nameColumn, nameColumn2, nameColumn3, index, bounds) {
         const position = new naver.maps.LatLng(parseFloat(y), parseFloat(x));
 
         const half = markerSize / 2;
@@ -1128,11 +1168,15 @@
 
         const name = nameColumn ? row[nameColumn] : `위치 ${index + 1}`;
         const name2 = nameColumn2 ? row[nameColumn2] : "";
+        const name3 = nameColumn3 ? row[nameColumn3] : "";
 
         // InfoWindow에는 원본 주소(rawAddress) 표시
         let infoContent = `<div style="padding:10px;"><strong>${name}</strong>`;
         if (name2) {
           infoContent += `<br><span style="color:#666;">${name2}</span>`;
+        }
+        if (name3) {
+          infoContent += `<br><span style="color:#888;">${name3}</span>`;
         }
         infoContent += `<br>${rawAddress}</div>`;
 
@@ -1151,18 +1195,22 @@
         let labelOverlay = null;
         const hasName1 = nameColumn && row[nameColumn];
         const hasName2 = nameColumn2 && row[nameColumn2];
+        const hasName3 = nameColumn3 && row[nameColumn3];
 
-        if (hasName1 || hasName2) {
+        let labelHtml = "";
+        if (hasName1) {
+          labelHtml += row[nameColumn];
+        }
+        if (hasName2) {
+          labelHtml += `<br><span class="sub-label">${row[nameColumn2]}</span>`;
+        }
+        if (hasName3) {
+          labelHtml += `<br><span class="sub-label-2">${row[nameColumn3]}</span>`;
+        }
+
+        if (hasName1 || hasName2 || hasName3) {
           const currentZoom = map.getZoom();
           const showLabel = currentZoom >= LABEL_ZOOM_THRESHOLD;
-
-          let labelHtml = "";
-          if (hasName1) {
-            labelHtml += row[nameColumn];
-          }
-          if (hasName2) {
-            labelHtml += `<br><span class="sub-label">${row[nameColumn2]}</span>`;
-          }
 
           const labelContent = buildLabelContent(labelHtml, showLabel ? "block" : "none");
 
@@ -1180,10 +1228,7 @@
         markers.push({
           marker: marker,
           labelOverlay: labelOverlay,
-          labelHtml: (hasName1 || hasName2) ? (
-            (hasName1 ? row[nameColumn] : "") +
-            (hasName2 ? `<br><span class="sub-label">${row[nameColumn2]}</span>` : "")
-          ) : undefined
+          labelHtml: (hasName1 || hasName2 || hasName3) ? labelHtml : undefined
         });
         bounds.extend(position);
       }
